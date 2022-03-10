@@ -1,9 +1,9 @@
 use std::io::{self, BufRead, BufReader, BufWriter, Result, Write};
 use std::net::{Shutdown, TcpStream, ToSocketAddrs};
 use std::str::FromStr;
-use std::sync::mpsc::{Sender, channel};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration};
+use crossbeam_channel::{unbounded, select, Sender};
 
 use config::Config;
 use pocsag::{Message, MessageFunc, MessageSpeed, MessageType};
@@ -69,7 +69,7 @@ impl Connection {
 
     pub fn start(config: Config, scheduler: Scheduler)
         -> (Sender<()>, JoinHandle<()>) {
-        let (stop_tx, stop_rx) = channel();
+        let (stop_tx, stop_rx) = unbounded();
 
         let handle = thread::spawn(move || {
             let mut reconnect = true;
@@ -100,15 +100,15 @@ impl Connection {
 
                     let stream = connection.stream.try_clone().unwrap();
 
-                    let (stopped_tx, stopped_rx) = channel();
+                    let (stopped_tx, stopped_rx) = unbounded();
                     let handle = thread::spawn(move || {
                         connection.run().ok();
                         stopped_tx.send(()).unwrap();
                     });
 
                     select! {
-                        _ = stopped_rx.recv() => reconnect = true,
-                        _ = stop_rx.recv() => reconnect = false
+                        recv(stopped_rx) -> _ => reconnect = true,
+                        recv(stop_rx) -> _ => reconnect = false
                     }
 
                     stream.shutdown(Shutdown::Both).ok();

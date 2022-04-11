@@ -3,7 +3,7 @@ use std::fmt;
 use std::fs::File;
 use std::io::{Read, Write};
 
-const CONFIG_FILE: &'static str = "config.json";
+const CONFIG_FILE: &'static str = "/etc/unipager.json";
 
 fn default_fallback_servers() -> Vec<(String, u16)> {
     [

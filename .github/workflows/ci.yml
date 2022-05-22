@@ -1,0 +1,27 @@
+---
+name: CI
+
+on:
+  push:
+    tags:
+      - 'v*-*-aarch64'
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup
+        run: cargo install cross
+
+      - name: Build
+        run: cross build --release --target aarch64-unknown-linux-musl
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: target/aarch64-unknown-linux-musl/release/unipager
+          fail_on_unmatched_files: true
